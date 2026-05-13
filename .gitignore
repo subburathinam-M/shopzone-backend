@@ -1,0 +1,54 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Build files
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+keycloak_data/
+
+# Application specific
+**/application-local.yml
+**/application-dev.yml
+**/application-prod.yml
+
+# Frontend
+node_modules/
+build/
+dist/
+.env.local
+
+# Uploads
+uploads/
+**/uploads/
+
+# Temp files
+*.tmp
+*.swp
+*~

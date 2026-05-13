@@ -1,0 +1,113 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: ORDER-SERVICE
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/orderdb}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/shopzone-realm}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8090/realms/shopzone-realm/protocol/openid-connect/certs}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      group-id: order-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+      properties:
+        spring.json.trusted.packages: "*"
+
+        spring.json.type.mapping:
+          paymentEvent: com.example.Order.Service.event.PaymentEvent
+
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+        group:
+          enabled: true
+
+feign:
+  circuitbreaker:
+    enabled: true
+
+  client:
+    config:
+      default:
+        connectTimeout: 30000
+        readTimeout: 30000
+        loggerLevel: full
+
+resilience4j:
+  timelimiter:
+    instances:
+      PRODUCT-SERVICE:
+        timeoutDuration: 30s
+        cancelRunningFuture: true
+
+      PAYMENT-SERVICE:
+        timeoutDuration: 30s
+        cancelRunningFuture: true
+
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 3
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5000ms
+        failureRateThreshold: 50
+
+        ignoreExceptions:
+          - feign.FeignException$NotFound
+          - com.example.Order.Service.exception.ProductNotFoundException
+          - com.example.Order.Service.exception.OutOfStockException
+          - com.example.Order.Service.exception.InvalidQuantityException
+
+    instances:
+      PRODUCT-SERVICE:
+        baseConfig: default
+
+      PAYMENT-SERVICE:
+        baseConfig: default
+
+eureka:
+  instance:
+    prefer-ip-address: true
+
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+
+    registry-fetch-interval-seconds: 5
+
+logging:
+  level:
+    com.example.Order.Service: ${LOG_LEVEL:INFO}

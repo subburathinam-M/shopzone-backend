@@ -1,0 +1,16 @@
+server:
+  port: ${SERVER_PORT:8761}
+
+spring:
+  application:
+    name: EUREKA-SERVER
+
+eureka:
+  client:
+    register-with-eureka: false
+
+    fetch-registry: false
+
+logging:
+  level:
+    com.netflix.eureka: ${LOG_LEVEL:INFO}

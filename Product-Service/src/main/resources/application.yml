@@ -1,0 +1,50 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: PRODUCT-SERVICE
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/productdb}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        enable_lazy_load_no_trans: false
+
+    open-in-view: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/shopzone-realm}
+
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8090/realms/shopzone-realm/protocol/openid-connect/certs}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+
+    fetch-registry: true
+    register-with-eureka: true
+
+file:
+  upload-dir: ${UPLOAD_DIR:./uploads}
+
+logging:
+  level:
+    com.example.Product.Service: ${LOG_LEVEL:INFO}

@@ -1,0 +1,61 @@
+server:
+  port: ${SERVER_PORT:8086}
+
+spring:
+  application:
+    name: Notification-Service
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
+
+    consumer:
+      group-id: notification-service
+
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+      properties:
+        spring.json.trusted.packages: "*"
+
+        spring.json.use.type.headers: false
+
+        spring.json.type.mapping:
+          orderPlacedEvent: com.example.Notification_Service.event.OrderPlacedEvent
+          paymentEvent: com.example.Notification_Service.event.PaymentEvent
+          userRegisteredEvent: com.example.Notification_Service.event.UserRegisteredEvent
+          passwordResetEvent: com.example.Notification_Service.event.PasswordResetEvent
+
+      auto-offset-reset: earliest
+
+  mail:
+    host: smtp.gmail.com
+
+    port: 587
+
+    username: ${MAIL_USERNAME:}
+
+    password: ${MAIL_PASSWORD:}
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+
+          starttls:
+            enable: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+
+    fetch-registry: true
+
+    register-with-eureka: true
+
+logging:
+  level:
+    com.example.notification: ${LOG_LEVEL:INFO}
+
+    org.springframework.kafka: ${LOG_LEVEL:INFO}

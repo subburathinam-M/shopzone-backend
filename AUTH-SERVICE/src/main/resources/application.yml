@@ -1,0 +1,75 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: AUTH-SERVICE
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/authdb}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/shopzone-realm}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8090/realms/shopzone-realm/protocol/openid-connect/certs}
+
+  keycloak:
+    admin:
+      server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8090}
+      realm: ${KEYCLOAK_REALM:shopzone-realm}
+      client-id: ${KEYCLOAK_CLIENT_ID:shopzone-backend}
+      client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+
+  reset-password:
+    path: /reset-password
+
+eureka:
+  instance:
+    prefer-ip-address: true
+
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+
+    fetch-registry: true
+    register-with-eureka: true
+
+logging:
+  level:
+    com.example.AUTH_SERVICE: ${LOG_LEVEL:INFO}
