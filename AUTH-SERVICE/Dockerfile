@@ -10,4 +10,4 @@ RUN ./mvnw clean package -DskipTests
 
 EXPOSE 10000
 
-CMD ["java", "-jar", "target/Auth-Service-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-jar", "target/AUTH-SERVICE-0.0.1-SNAPSHOT.jar"]
