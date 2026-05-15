@@ -29,32 +29,44 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
+
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
       properties:
         spring.json.add.type.headers: true
+
     consumer:
       group-id: payment-service
+
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
       properties:
         spring.json.trusted.packages: "*"
+
         spring.json.use.type.headers: false
-        spring.json.type.mapping: 
+
+        spring.json.type.mapping:
           orderPlacedEvent: com.example.Payment_Service.event.OrderPlacedEvent
 
 eureka:
   instance:
     prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+
     fetch-registry: true
     register-with-eureka: true
 
 stripe:
   api-key: ${STRIPE_SECRET_KEY:}
+
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 
 logging:
