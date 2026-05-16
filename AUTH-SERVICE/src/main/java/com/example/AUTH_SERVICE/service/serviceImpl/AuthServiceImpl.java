@@ -70,8 +70,8 @@ public class AuthServiceImpl implements AuthService {
             keycloakUser.setFirstName(request.getFirstName());
             keycloakUser.setLastName(request.getLastName());
             keycloakUser.setEnabled(true);
-            keycloakUser.setEmailVerified(false);
-            keycloakUser.setRequiredActions(List.of("VERIFY_EMAIL"));
+            keycloakUser.setEmailVerified(true);
+            // keycloakUser.setRequiredActions(List.of("VERIFY_EMAIL"));
 
             CredentialRepresentation credential = new CredentialRepresentation();
             credential.setType(CredentialRepresentation.PASSWORD);
