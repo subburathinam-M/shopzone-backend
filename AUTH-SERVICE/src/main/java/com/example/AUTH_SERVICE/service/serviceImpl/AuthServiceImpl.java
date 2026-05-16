@@ -156,19 +156,19 @@ public class AuthServiceImpl implements AuthService {
             }
 
             // 8️⃣ ✅ SEND VERIFY EMAIL (SYNC - NO BACKGROUND!)
-            try {
-                keycloakAdmin.realm(realm)
-                        .users()
-                        .get(tempKeycloakUserId)
-                        .sendVerifyEmail();
-                log.info("✅ Verification email sent");
-            } catch (Exception e) {
-                // Email send failed → ROLLBACK everything
-                log.error("❌ Email send failed: {}", e.getMessage());
-                userRepository.delete(savedUser);
-                keycloakAdmin.realm(realm).users().get(tempKeycloakUserId).remove();
-                throw new RuntimeException("Verification email failed. Registration cancelled.");
-            }
+            // try {
+            //     keycloakAdmin.realm(realm)
+            //             .users()
+            //             .get(tempKeycloakUserId)
+            //             .sendVerifyEmail();
+            //     log.info("✅ Verification email sent");
+            // } catch (Exception e) {
+            //     // Email send failed → ROLLBACK everything
+            //     log.error("❌ Email send failed: {}", e.getMessage());
+            //     userRepository.delete(savedUser);
+            //     keycloakAdmin.realm(realm).users().get(tempKeycloakUserId).remove();
+            //     throw new RuntimeException("Verification email failed. Registration cancelled.");
+            // }
 
             // 9️⃣ Kafka event (non-critical - can fail without rollback)
             // try {
