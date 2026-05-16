@@ -54,15 +54,15 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         userRepository.save(user);
 
         // Publish Kafka event
-        PasswordResetEvent event = new PasswordResetEvent(
-            user.getId(),
-            user.getEmail(),
-            user.getUsername(),
-            token,
-            LocalDateTime.now()
-        );
-        kafkaTemplate.send("password-reset-events", event);
-        log.info("📤 Published PasswordResetEvent for user: {}", user.getEmail());
+        // PasswordResetEvent event = new PasswordResetEvent(
+        //     user.getId(),
+        //     user.getEmail(),
+        //     user.getUsername(),
+        //     token,
+        //     LocalDateTime.now()
+        // );
+        // kafkaTemplate.send("password-reset-events", event);
+        // log.info("📤 Published PasswordResetEvent for user: {}", user.getEmail());
 
         return new PasswordResetResponse(
             "Password reset link sent to your email. Check your inbox (or spam folder).",

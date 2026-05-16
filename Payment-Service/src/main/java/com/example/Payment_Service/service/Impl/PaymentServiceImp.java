@@ -58,19 +58,19 @@ public class PaymentServiceImp implements PaymentService {
 
 
          // 👇 PUBLISH PAYMENT EVENT (PENDING)
-        PaymentEvent event = new PaymentEvent(
-            savedPayment.getId(),
-            savedPayment.getOrderId(),
-            savedPayment.getUserId(),
-            payment.getUserEmail(),  // 👈 Now has value! // userEmail - you need to get this from User Service or add to request
-            savedPayment.getAmount(),
-            "PENDING",
-            "COD",
-            LocalDateTime.now()
-        );
+        // PaymentEvent event = new PaymentEvent(
+        //     savedPayment.getId(),
+        //     savedPayment.getOrderId(),
+        //     savedPayment.getUserId(),
+        //     payment.getUserEmail(),  // 👈 Now has value! // userEmail - you need to get this from User Service or add to request
+        //     savedPayment.getAmount(),
+        //     "PENDING",
+        //     "COD",
+        //     LocalDateTime.now()
+        // );
         
-        kafkaTemplate.send("payment-events", event);
-        log.info("📤 Published PaymentEvent (PENDING) for order: {}", request.getOrderId());
+        // kafkaTemplate.send("payment-events", event);
+        // log.info("📤 Published PaymentEvent (PENDING) for order: {}", request.getOrderId());
 
         return mapToResponse(savedPayment);
     }
@@ -89,19 +89,19 @@ public class PaymentServiceImp implements PaymentService {
         log.info("Payment {} marked as PAID", paymentId);
 
          // 👇 PUBLISH PAYMENT SUCCESS EVENT
-         PaymentEvent event = new PaymentEvent(
-            updated.getId(),
-            updated.getOrderId(),
-            updated.getUserId(),
-            payment.getUserEmail(),  // 👈 Now has value!,  // userEmail - you need to get this
-            updated.getAmount(),
-            "SUCCESS",
-            updated.getPaymentMethod(),
-            LocalDateTime.now()
-        );
+        //  PaymentEvent event = new PaymentEvent(
+        //     updated.getId(),
+        //     updated.getOrderId(),
+        //     updated.getUserId(),
+        //     payment.getUserEmail(),  // 👈 Now has value!,  // userEmail - you need to get this
+        //     updated.getAmount(),
+        //     "SUCCESS",
+        //     updated.getPaymentMethod(),
+        //     LocalDateTime.now()
+        // );
         
-        kafkaTemplate.send("payment-events", event);
-        log.info("📤 Published PaymentEvent (SUCCESS) for order: {}", updated.getOrderId());
+        // kafkaTemplate.send("payment-events", event);
+        // log.info("📤 Published PaymentEvent (SUCCESS) for order: {}", updated.getOrderId());
 
         return mapToResponse(updated);
     }

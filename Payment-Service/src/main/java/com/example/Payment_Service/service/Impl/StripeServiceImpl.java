@@ -88,24 +88,24 @@ public class StripeServiceImpl implements StripeService {
 
 
              // 👇 PUBLISH PAYMENT EVENT (PENDING)
-            try {
-            PaymentEvent event = new PaymentEvent(
-                savedPayment.getId(),
-                savedPayment.getOrderId(),
-                savedPayment.getUserId(),
-                savedPayment.getUserEmail(),  // Add userEmail to CreatePaymentIntentRequest
-                savedPayment.getAmount(),
-                "PENDING",
-                "ONLINE",
-                LocalDateTime.now()
-            );
+        //     try {
+        //     PaymentEvent event = new PaymentEvent(
+        //         savedPayment.getId(),
+        //         savedPayment.getOrderId(),
+        //         savedPayment.getUserId(),
+        //         savedPayment.getUserEmail(),  // Add userEmail to CreatePaymentIntentRequest
+        //         savedPayment.getAmount(),
+        //         "PENDING",
+        //         "ONLINE",
+        //         LocalDateTime.now()
+        //     );
             
-            kafkaTemplate.send("payment-events", event);
-            log.info(   "📤 Published PaymentEvent (PENDING) for online order: {}", request.getOrderId());
-        } catch (Exception e) {
-            log.error("❌ Kafka error but continuing: {}", e.getMessage());
-            // Don't throw - let payment succeed even if Kafka fails
-        }
+        //     kafkaTemplate.send("payment-events", event);
+        //     log.info(   "📤 Published PaymentEvent (PENDING) for online order: {}", request.getOrderId());
+        // } catch (Exception e) {
+        //     log.error("❌ Kafka error but continuing: {}", e.getMessage());
+        //     // Don't throw - let payment succeed even if Kafka fails
+        // }
 
 
             CreatePaymentIntentResponse response = new CreatePaymentIntentResponse();
@@ -162,19 +162,19 @@ public void handlePaymentSuccess(String paymentIntentId) {
     paymentRepository.save(payment);
     log.info("Payment {} marked as PAID for order: {}", paymentIntentId, payment.getOrderId());
     // 👇 PUBLISH PAYMENT SUCCESS EVENT
-    PaymentEvent event = new PaymentEvent(
-        payment.getId(),
-        payment.getOrderId(),
-        payment.getUserId(),
-        payment.getUserEmail(),  // Need user email
-        payment.getAmount(),
-        "SUCCESS",
-        "ONLINE",
-        LocalDateTime.now()
-    );
+    // PaymentEvent event = new PaymentEvent(
+    //     payment.getId(),
+    //     payment.getOrderId(),
+    //     payment.getUserId(),
+    //     payment.getUserEmail(),  // Need user email
+    //     payment.getAmount(),
+    //     "SUCCESS",
+    //     "ONLINE",
+    //     LocalDateTime.now()
+    // );
     
-    kafkaTemplate.send("payment-events", event);
-    log.info("📤 Published PaymentEvent (SUCCESS) for order: {}", payment.getOrderId());
+    // kafkaTemplate.send("payment-events", event);
+    // log.info("📤 Published PaymentEvent (SUCCESS) for order: {}", payment.getOrderId());
 }
 
     @Transactional
@@ -193,19 +193,19 @@ public void handlePaymentSuccess(String paymentIntentId) {
 
 
         // 👇 PUBLISH PAYMENT FAILURE EVENT
-        PaymentEvent event = new PaymentEvent(
-            payment.getId(),
-            payment.getOrderId(),
-            payment.getUserId(),
-            payment.getUserEmail(), // Need user email
-            payment.getAmount(),
-            "FAILED",
-            "ONLINE",
-            LocalDateTime.now()
-        );
+        // PaymentEvent event = new PaymentEvent(
+        //     payment.getId(),
+        //     payment.getOrderId(),
+        //     payment.getUserId(),
+        //     payment.getUserEmail(), // Need user email
+        //     payment.getAmount(),
+        //     "FAILED",
+        //     "ONLINE",
+        //     LocalDateTime.now()
+        // );
         
-        kafkaTemplate.send("payment-events", event);
-        log.info("📤 Published PaymentEvent (FAILED) for order: {}", payment.getOrderId());
+        // kafkaTemplate.send("payment-events", event);
+        // log.info("📤 Published PaymentEvent (FAILED) for order: {}", payment.getOrderId());
     }
 }
 

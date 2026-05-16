@@ -171,19 +171,19 @@ public class AuthServiceImpl implements AuthService {
             }
 
             // 9️⃣ Kafka event (non-critical - can fail without rollback)
-            try {
-                kafkaTemplate.send("user-events", new UserRegisteredEvent(
-                        savedUser.getId(),
-                        savedUser.getEmail(),
-                        savedUser.getUsername(),
-                        savedUser.getFirstName(),
-                        savedUser.getLastName(),
-                        LocalDateTime.now()
-                ));
-                log.info("✅ Kafka event sent");
-            } catch (Exception ex) {
-                log.error("⚠️ Kafka failed (non-critical): {}", ex.getMessage());
-            }
+            // try {
+            //     kafkaTemplate.send("user-events", new UserRegisteredEvent(
+            //             savedUser.getId(),
+            //             savedUser.getEmail(),
+            //             savedUser.getUsername(),
+            //             savedUser.getFirstName(),
+            //             savedUser.getLastName(),
+            //             LocalDateTime.now()
+            //     ));
+            //     log.info("✅ Kafka event sent");
+            // } catch (Exception ex) {
+            //     log.error("⚠️ Kafka failed (non-critical): {}", ex.getMessage());
+            // }
 
             log.info("🎉 Register SUCCESS in {}ms for: {}", 
                     System.currentTimeMillis() - startTime, request.getEmail());

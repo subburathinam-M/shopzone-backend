@@ -138,20 +138,20 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(pendingOrder);
 
         // 👇 Also publish event for pending orders (with zero amount)
-        OrderPlacedEvent event = new OrderPlacedEvent(
-            savedOrder.getId(),
-            null, // userId can be null now, use keycloakId instead
-            email,
-            username,
-            productId,
-            quantity,
-            0.0,
-            "PENDING",
-            LocalDateTime.now()
-        );
+        // OrderPlacedEvent event = new OrderPlacedEvent(
+        //     savedOrder.getId(),
+        //     null, // userId can be null now, use keycloakId instead
+        //     email,
+        //     username,
+        //     productId,
+        //     quantity,
+        //     0.0,
+        //     "PENDING",
+        //     LocalDateTime.now()
+        // );
 
-        kafkaTemplate.send("order-events", event);
-        log.info("📤 Published PENDING OrderPlacedEvent to Kafka for order: {}", savedOrder.getId());
+        // kafkaTemplate.send("order-events", event);
+        // log.info("📤 Published PENDING OrderPlacedEvent to Kafka for order: {}", savedOrder.getId());
 
         log.info("✅ PENDING order created with ID: {}, quantity: {}, user: {}", savedOrder.getId(), quantity, username);
         return savedOrder;
@@ -264,20 +264,20 @@ public class OrderServiceImpl implements OrderService {
                 log.info("✅ Payment recorded with ID: {} for order: {}", paymentResponse.getId(), savedOrder.getId());
 
                 // 👇 5. PUBLISH KAFKA EVENT AFTER PAYMENT RECORDED
-                OrderPlacedEvent event = new OrderPlacedEvent(
-                    savedOrder.getId(),
-                    null, // userId can be null
-                    email,
-                    username,
-                    productId,
-                    quantity,
-                    savedOrder.getPrice(),
-                    "COD",
-                    LocalDateTime.now()
-                );
+                // OrderPlacedEvent event = new OrderPlacedEvent(
+                //     savedOrder.getId(),
+                //     null, // userId can be null
+                //     email,
+                //     username,
+                //     productId,
+                //     quantity,
+                //     savedOrder.getPrice(),
+                //     "COD",
+                //     LocalDateTime.now()
+                // );
 
-                kafkaTemplate.send("order-events", event);
-                log.info("📤 Published OrderPlacedEvent to Kafka for order: {}", savedOrder.getId());
+                // kafkaTemplate.send("order-events", event);
+                // log.info("📤 Published OrderPlacedEvent to Kafka for order: {}", savedOrder.getId());
 
                 return orderRepository.save(savedOrder);
 
@@ -370,20 +370,20 @@ public class OrderServiceImpl implements OrderService {
                     savedOrder.getId(), quantity, savedOrder.getPrice());
     
             // 👇 PUBLISH KAFKA EVENT
-            OrderPlacedEvent event = new OrderPlacedEvent(
-                savedOrder.getId(),
-                null,
-                email,
-                username,
-                productId,
-                quantity,
-                savedOrder.getPrice(),
-                "ONLINE",
-                LocalDateTime.now()
-            );
+            // OrderPlacedEvent event = new OrderPlacedEvent(
+            //     savedOrder.getId(),
+            //     null,
+            //     email,
+            //     username,
+            //     productId,
+            //     quantity,
+            //     savedOrder.getPrice(),
+            //     "ONLINE",
+            //     LocalDateTime.now()
+            // );
     
-            kafkaTemplate.send("order-events", event);
-            log.info("📤 Published OrderPlacedEvent to Kafka for online order: {}", savedOrder.getId());
+            // kafkaTemplate.send("order-events", event);
+            // log.info("📤 Published OrderPlacedEvent to Kafka for online order: {}", savedOrder.getId());
     
             return savedOrder;
     
