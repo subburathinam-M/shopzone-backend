@@ -18,10 +18,12 @@ public class GatewayCorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         // corsConfig.setAllowedOrigins(Arrays.asList("https://shopezonez.netlify.app"));  // Single value
-        corsConfig.setAllowedOrigins(Arrays.asList(
+        corsConfig.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:3000",
-            "https://shopezonez.netlify.app"
-    ));
+            "https://*.netlify.app",
+            "https://shopezonez.netlify.app",
+            "https://www.shopezonez.netlify.app"
+        ));
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         corsConfig.setAllowedHeaders(Arrays.asList("*"));
         corsConfig.setAllowCredentials(true);
