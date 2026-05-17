@@ -11,9 +11,16 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 30000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
@@ -38,11 +45,10 @@ app:
   reset-password:
     path: /reset-password
 
-# JWT Configuration
 jwt:
   secret: ${JWT_SECRET:s8Kx92!LmPq#2026@ShopZoneJWTSecret}
-  expiration: ${JWT_EXPIRATION:900000}        # 15 minutes
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+  expiration: ${JWT_EXPIRATION:900000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
 eureka:
   instance:
