@@ -13,7 +13,7 @@ import java.util.UUID;
 @Service
 public class ImageStorageService {
     
-    private final Path imageLocation = Paths.get("uploads/products");
+    private final Path imageLocation = Paths.get("./uploads/products");
     
     public ImageStorageService() {
         try {
@@ -35,7 +35,10 @@ public class ImageStorageService {
         
         // Save file
         Path filePath = productFolder.resolve(filename);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+    System.out.println("Saving image to: " + filePath.toAbsolutePath());
+
+    Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         
         // Return URL path
         return "/uploads/products/" + productId + "/" + filename;
