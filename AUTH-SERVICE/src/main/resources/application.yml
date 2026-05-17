@@ -40,7 +40,7 @@ app:
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:mySecretKeyForJwtTokenGenerationInProductionChangeThisTo256BitLongStringForHS256}
+  secret: ${JWT_SECRET:s8Kx92!LmPq#2026@ShopZoneJWTSecret}
   expiration: ${JWT_EXPIRATION:900000}        # 15 minutes
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
 

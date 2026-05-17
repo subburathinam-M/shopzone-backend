@@ -42,4 +42,4 @@ logging:
   level:
     com.example.Product.Service: ${LOG_LEVEL:INFO}
 jwt:
-  secret: ${JWT_SECRET:your-super-secret-key-must-be-at-least-32-chars-long}
+  secret: ${JWT_SECRET:s8Kx92!LmPq#2026@ShopZoneJWTSecret}
