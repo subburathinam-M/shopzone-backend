@@ -2,14 +2,21 @@ package com.example.Order.Service.controller;
 
 import com.example.Order.Service.entity.Order;
 import com.example.Order.Service.service.OrderService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
+import java.security.Key;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,85 +24,77 @@ import java.util.Map;
 @RestController
 @RequestMapping("/orders")
 @RequiredArgsConstructor
+@Slf4j
 public class OrderController {
-    
+
     private final OrderService orderService;
 
-    // ✅ USER: Get their own orders (from JWT token)
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
     @GetMapping
-    public ResponseEntity<List<Order>> getUserOrders(@AuthenticationPrincipal Jwt jwt) {
-        String keycloakId = jwt.getSubject();  // Get Keycloak user ID
-        List<Order> orders = orderService.getUserOrders(keycloakId);  // Pass keycloakId directly
+    public ResponseEntity<List<Order>> getUserOrders(@AuthenticationPrincipal UserDetails userDetails) {
+        String username = userDetails.getUsername();
+        List<Order> orders = orderService.getUserOrders(username);
         return ResponseEntity.ok(orders);
     }
 
-    // ✅ ADMIN: Get all orders with user details
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Order>> getAllOrders() {
-        List<Order> orders = orderService.getAllOrders();
-        return ResponseEntity.ok(orders);
+        return ResponseEntity.ok(orderService.getAllOrders());
     }
 
-    // ✅ Get single order by ID (with permission check)
     @GetMapping("/{id}")
     public ResponseEntity<Order> getOrderById(
             @PathVariable Long id,
-            @AuthenticationPrincipal Jwt jwt) {
-        
-        String keycloakId = jwt.getSubject();
-        String role = extractRole(jwt);
-        
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String username = userDetails.getUsername();
+        String role = extractRole(userDetails);
         Order order = orderService.getOrderById(id);
-        
-        // Check if user owns this order or is admin
-        if (!order.getUserKeycloakId().equals(keycloakId) && !"ADMIN".equals(role)) {
+
+        if (!order.getUserKeycloakId().equals(username) && !"ADMIN".equals(role)) {
             return ResponseEntity.status(403).build();
         }
-        
         return ResponseEntity.ok(order);
     }
 
-    // Single quantity (default = 1)
     @PostMapping("/{productId}")
     public ResponseEntity<?> placeOrder(
             @PathVariable Long productId,
-            @AuthenticationPrincipal Jwt jwt) {
-        
-        String keycloakId = jwt.getSubject();
-        String email = jwt.getClaim("email");
-        String username = jwt.getClaim("preferred_username");
-        
-        Order order = orderService.placeOrder(productId, keycloakId, email, username);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Order placed successfully");
-        response.put("order", order);
-        return ResponseEntity.ok(response);
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest request) {
+
+        String username = userDetails.getUsername();
+        String email = extractEmail(request);
+
+        Order order = orderService.placeOrder(productId, username, email, username);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Order placed successfully",
+                "order", order));
     }
 
-    // Multiple quantity endpoint
     @PostMapping("/{productId}/quantity/{quantity}")
     public ResponseEntity<?> placeOrderWithQuantity(
             @PathVariable Long productId,
             @PathVariable int quantity,
-            @AuthenticationPrincipal Jwt jwt) {
-        
-        String keycloakId = jwt.getSubject();
-        String email = jwt.getClaim("email");
-        String username = jwt.getClaim("preferred_username");
-        
-        Order order = orderService.placeOrderWithQuantity(productId, quantity, keycloakId, email, username);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Order placed successfully");
-        response.put("order", order);
-        return ResponseEntity.ok(response);
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest request) {
+
+        String username = userDetails.getUsername();
+        String email = extractEmail(request);
+
+        Order order = orderService.placeOrderWithQuantity(productId, quantity, username, email, username);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Order placed successfully",
+                "order", order));
     }
 
-    // 🔥 COD Order endpoint
     @PostMapping("/cod/{productId}")
     public ResponseEntity<?> placeCODOrder(
             @PathVariable Long productId,
@@ -104,133 +103,100 @@ public class OrderController {
             @RequestParam String phone,
             @RequestParam String city,
             @RequestParam String pincode,
-            @AuthenticationPrincipal Jwt jwt) {
-        
-        String keycloakId = jwt.getSubject();
-        String email = jwt.getClaim("email");
-        String username = jwt.getClaim("preferred_username");
-        
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest request) {
+
+        String username = userDetails.getUsername();
+        String email = extractEmail(request);
+
         Order order = orderService.placeCODOrder(
-            productId, quantity, address, phone, city, pincode, 
-            keycloakId, email, username);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "COD order placed successfully");
-        response.put("order", order);
-        return ResponseEntity.ok(response);
+                productId, quantity, address, phone, city, pincode,
+                username, email, username);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "COD order placed successfully",
+                "order", order));
     }
 
-    // 🔥 ONLINE Order endpoint
-  // In OrderController.java - update the method signature
-@PostMapping("/online/{productId}")
-public ResponseEntity<?> placeOnlineOrder(
-        @PathVariable Long productId,
-        @RequestParam int quantity,
-        @RequestParam Double price,  // ✅ Make sure this exists
-        @RequestParam String address,
-        @RequestParam String phone,
-        @RequestParam String city,
-        @RequestParam String pincode,       
-        @AuthenticationPrincipal Jwt jwt) {
-    
-    String keycloakId = jwt.getSubject();
-    String email = jwt.getClaim("email");
-    String username = jwt.getClaim("preferred_username");
-    
-    Order order = orderService.placeOnlineOrder(
-        productId, quantity, price, address, phone, city, pincode,  // ✅ Pass price here!
-        keycloakId, email, username);
-    
-    Map<String, Object> response = new HashMap<>();
-    response.put("success", true);
-    response.put("message", "Online order placed successfully");
-    response.put("order", order);
-    return ResponseEntity.ok(response);
-}
+    @PostMapping("/online/{productId}")
+    public ResponseEntity<?> placeOnlineOrder(
+            @PathVariable Long productId,
+            @RequestParam int quantity,
+            @RequestParam Double price,
+            @RequestParam String address,
+            @RequestParam String phone,
+            @RequestParam String city,
+            @RequestParam String pincode,
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest request) {
+
+        String username = userDetails.getUsername();
+        String email = extractEmail(request);
+
+        Order order = orderService.placeOnlineOrder(
+                productId, quantity, price, address, phone, city, pincode,
+                username, email, username);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Online order placed successfully",
+                "order", order));
+    }
 
     @PutMapping("/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> updateOrderStatus(
             @PathVariable Long orderId,
-            @RequestBody Map<String, String> request,
-            @AuthenticationPrincipal Jwt jwt) {
-        
-        String role = extractRole(jwt);
-        if (!"ADMIN".equals(role)) {
-            return ResponseEntity.status(403).build();
-        }
-        
+            @RequestBody Map<String, String> request) {
         String status = request.get("status");
-        Order updatedOrder = orderService.updateOrderStatus(orderId, status);
-        return ResponseEntity.ok(updatedOrder);
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, status));
     }
-    
-    // @DeleteMapping("/{orderId}")
-    // public ResponseEntity<?> deleteOrder(
-    //         @PathVariable Long orderId,
-    //         @AuthenticationPrincipal Jwt jwt) {
-        
-    //     String role = extractRole(jwt);
-    //     if (!"ADMIN".equals(role)) {
-    //         return ResponseEntity.status(403).build();
-    //     }
-        
-    //     orderService.softDeleteOrder(orderId);
-    //     return ResponseEntity.ok().build();
-    // }
 
     @DeleteMapping("/{orderId}")
-public ResponseEntity<?> deleteOrder(
-        @PathVariable Long orderId,
-        @AuthenticationPrincipal Jwt jwt) {
-    
-    String keycloakId = jwt.getSubject();
-    String role = extractRole(jwt);
-    
-    try {
-        // Get the order first
-        Order order = orderService.getOrderById(orderId);
-        
-        // Allow if: ADMIN OR Order Owner
-        if (!"ADMIN".equals(role) && !order.getUserKeycloakId().equals(keycloakId)) {
-            return ResponseEntity.status(403).body(Map.of(
-                "success", false,
-                "message", "You don't have permission to delete this order"
-            ));
-        }
-        
-        // Soft delete
-        orderService.softDeleteOrder(orderId);
-        
-        return ResponseEntity.ok(Map.of(
-            "success", true,
-            "message", "Order deleted successfully"
-        ));
-        
-    } catch (Exception e) {
-        return ResponseEntity.status(500).body(Map.of(
-            "success", false,
-            "message", "Failed to delete order: " + e.getMessage()
-        ));
-    }
-}
+    public ResponseEntity<?> deleteOrder(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-    // Helper method to extract role from JWT
-    private String extractRole(Jwt jwt) {
-        Map<String, Object> realmAccess = jwt.getClaim("realm_access");
-        if (realmAccess != null && realmAccess.containsKey("roles")) {
-            Collection<String> roles = (Collection<String>) realmAccess.get("roles");
-            if (roles.contains("ADMIN")) {
-                return "ADMIN";
+        String username = userDetails.getUsername();
+        String role = extractRole(userDetails);
+
+        try {
+            Order order = orderService.getOrderById(orderId);
+            if (!"ADMIN".equals(role) && !order.getUserKeycloakId().equals(username)) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "You don't have permission to delete this order"));
             }
+            orderService.softDeleteOrder(orderId);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Order deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
         }
-        return "USER";
     }
 
-    // Helper method to map keycloakId to local userId (implement based on your needs)
-    private Long getUserIdFromKeycloakId(String keycloakId) {
-        // You might want to call Auth Service or have a local mapping
-        // For now, return null or throw exception
-        throw new UnsupportedOperationException("Implement mapping from keycloakId to local userId");
+    private String extractRole(UserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority().replace("ROLE_", ""))
+                .orElse("USER");
+    }
+
+    private String extractEmail(HttpServletRequest request) {
+        try {
+            String header = request.getHeader("Authorization");
+            if (header != null && header.startsWith("Bearer ")) {
+                String token = header.substring(7);
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret)))
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+                return claims.get("email", String.class);
+            }
+        } catch (Exception e) {
+            log.warn("Could not extract email from token: {}", e.getMessage());
+        }
+        return "";
     }
 }

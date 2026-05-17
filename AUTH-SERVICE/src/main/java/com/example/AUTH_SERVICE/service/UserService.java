@@ -5,8 +5,9 @@ import com.example.AUTH_SERVICE.dto.UserResponse;
 
 public interface UserService {
     UserResponse getUserProfile(Long userId);
-    UserResponse getUserProfileByKeycloakId(String keycloakId);  // 👈 NEW
+    UserResponse getUserProfileByUsername(String username);
+    UserResponse getUserProfileByKeycloakId(String keycloakId);
     UserResponse updateProfile(Long userId, UpdateProfileRequest request);
-    UserResponse updateProfileByKeycloakId(String keycloakId, UpdateProfileRequest request);  // 👈 NEW
-
+    UserResponse updateProfileByUsername(String username, UpdateProfileRequest request);
+    UserResponse updateProfileByKeycloakId(String keycloakId, UpdateProfileRequest request);
 }

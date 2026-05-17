@@ -20,39 +20,6 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/shopzone-realm}
-          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8090/realms/shopzone-realm/protocol/openid-connect/certs}
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
-
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-
-    consumer:
-      group-id: order-service
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-
-      properties:
-        spring.json.trusted.packages: "*"
-
-        spring.json.type.mapping:
-          paymentEvent: com.example.Order.Service.event.PaymentEvent
-
-  cloud:
-    openfeign:
-      circuitbreaker:
-        enabled: true
-
-        group:
-          enabled: true
-
 feign:
   circuitbreaker:
     enabled: true
@@ -114,3 +81,5 @@ eureka:
 logging:
   level:
     com.example.Order.Service: ${LOG_LEVEL:INFO}
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-key-must-be-at-least-32-chars-long}

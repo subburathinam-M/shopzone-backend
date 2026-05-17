@@ -25,8 +25,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserResponse getUserProfileByUsername(String username) {
+        User user = userRepository.findByUsernameOrEmail(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        return mapToUserResponse(user);
+    }
+
+    @Override
     public UserResponse getUserProfileByKeycloakId(String keycloakId) {
-        log.info("Fetching user profile by Keycloak ID: {}", keycloakId);
         User user = userRepository.findByKeycloakId(keycloakId)
                 .orElseThrow(() -> new RuntimeException("User not found with Keycloak ID: " + keycloakId));
         return mapToUserResponse(user);
@@ -35,48 +41,35 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
-        log.info("Updating profile for user ID: {}", userId);
-        
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-        
         updateUserFields(user, request);
-        
-        User updatedUser = userRepository.save(user);
-        log.info("Profile updated for user ID: {}", userId);
-        
-        return mapToUserResponse(updatedUser);
+        return mapToUserResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfileByUsername(String username, UpdateProfileRequest request) {
+        User user = userRepository.findByUsernameOrEmail(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        updateUserFields(user, request);
+        return mapToUserResponse(userRepository.save(user));
     }
 
     @Override
     @Transactional
     public UserResponse updateProfileByKeycloakId(String keycloakId, UpdateProfileRequest request) {
-        log.info("Updating profile for Keycloak ID: {}", keycloakId);
-        
         User user = userRepository.findByKeycloakId(keycloakId)
                 .orElseThrow(() -> new RuntimeException("User not found with Keycloak ID: " + keycloakId));
-        
         updateUserFields(user, request);
-        
-        User updatedUser = userRepository.save(user);
-        log.info("Profile updated for Keycloak ID: {}", keycloakId);
-        
-        return mapToUserResponse(updatedUser);
+        return mapToUserResponse(userRepository.save(user));
     }
 
     private void updateUserFields(User user, UpdateProfileRequest request) {
-        if (request.getFirstName() != null) {
-            user.setFirstName(request.getFirstName());
-        }
-        if (request.getLastName() != null) {
-            user.setLastName(request.getLastName());
-        }
-        if (request.getPhoneNumber() != null) {
-            user.setPhoneNumber(request.getPhoneNumber());
-        }
-        if (request.getGender() != null) {
-            user.setGender(request.getGender());
-        }
+        if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) user.setLastName(request.getLastName());
+        if (request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
+        if (request.getGender() != null) user.setGender(request.getGender());
     }
 
     private UserResponse mapToUserResponse(User user) {

@@ -18,7 +18,6 @@ import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -31,16 +30,13 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductFeignClient productFeignClient;
     private final PaymentFeignClient paymentFeignClient;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             ProductFeignClient productFeignClient,
-                            PaymentFeignClient paymentFeignClient,
-                            KafkaTemplate<String, Object> kafkaTemplate) {
+                            PaymentFeignClient paymentFeignClient) {
         this.orderRepository = orderRepository;
         this.productFeignClient = productFeignClient;
         this.paymentFeignClient = paymentFeignClient;
-        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -150,7 +146,7 @@ public class OrderServiceImpl implements OrderService {
         //     LocalDateTime.now()
         // );
 
-        // kafkaTemplate.send("order-events", event);
+        //        //  kafkaTemplate.send("order-events", event);
         // log.info("📤 Published PENDING OrderPlacedEvent to Kafka for order: {}", savedOrder.getId());
 
         log.info("✅ PENDING order created with ID: {}, quantity: {}, user: {}", savedOrder.getId(), quantity, username);
@@ -276,7 +272,7 @@ public class OrderServiceImpl implements OrderService {
                 //     LocalDateTime.now()
                 // );
 
-                // kafkaTemplate.send("order-events", event);
+                //        //  kafkaTemplate.send("order-events", event);
                 // log.info("📤 Published OrderPlacedEvent to Kafka for order: {}", savedOrder.getId());
 
                 return orderRepository.save(savedOrder);
@@ -382,7 +378,7 @@ public class OrderServiceImpl implements OrderService {
             //     LocalDateTime.now()
             // );
     
-            // kafkaTemplate.send("order-events", event);
+            //        //  kafkaTemplate.send("order-events", event);
             // log.info("📤 Published OrderPlacedEvent to Kafka for online order: {}", savedOrder.getId());
     
             return savedOrder;

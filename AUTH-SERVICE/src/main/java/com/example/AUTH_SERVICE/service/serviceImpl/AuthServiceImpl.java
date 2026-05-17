@@ -1,27 +1,19 @@
 package com.example.AUTH_SERVICE.service.serviceImpl;
 
+import com.example.AUTH_SERVICE.Jwtutils.JwtService;
 import com.example.AUTH_SERVICE.dto.*;
 import com.example.AUTH_SERVICE.entity.User;
-import com.example.AUTH_SERVICE.event.UserRegisteredEvent;
 import com.example.AUTH_SERVICE.repository.UserRepository;
+import com.example.AUTH_SERVICE.security.CustomUserDetails;
 import com.example.AUTH_SERVICE.service.AuthService;
-
-import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,227 +22,141 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final Keycloak keycloakAdmin;
-
-    @Value("${spring.keycloak.admin.realm}")
-    private String realm;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        log.info("Register attempt for email: {}", request.getEmail());
 
-        long startTime = System.currentTimeMillis();
-        log.info("🚀 START Register: {}", request.getEmail());
-
-        String tempKeycloakUserId = null;
-        User savedUser = null;
-
-        try {
-            // 1️⃣ DB check - username exists?
-            if (userRepository.existsByUsername(request.getUsername())) {
-                return AuthResponse.builder()
-                        .success(false)
-                        .message("Username already exists")
-                        .build();
-            }
-
-            // 2️⃣ DB check - email exists?
-            if (userRepository.existsByEmail(request.getEmail())) {
-                return AuthResponse.builder()
-                        .success(false)
-                        .message("Email already exists")
-                        .build();
-            }
-
-            // 3️⃣ Create Keycloak user
-            UserRepresentation keycloakUser = new UserRepresentation();
-            keycloakUser.setUsername(request.getUsername());
-            keycloakUser.setEmail(request.getEmail());
-            keycloakUser.setFirstName(request.getFirstName());
-            keycloakUser.setLastName(request.getLastName());
-            keycloakUser.setEnabled(true);
-            keycloakUser.setEmailVerified(true);
-            // keycloakUser.setRequiredActions(List.of("VERIFY_EMAIL"));
-
-            CredentialRepresentation credential = new CredentialRepresentation();
-            credential.setType(CredentialRepresentation.PASSWORD);
-            credential.setValue(request.getPassword());
-            credential.setTemporary(false);
-            keycloakUser.setCredentials(List.of(credential));
-
-            Response response = keycloakAdmin.realm(realm)
-                    .users()
-                    .create(keycloakUser);
-
-            if (response.getStatus() != 201) {
-                String error = response.readEntity(String.class);
-                response.close();
-                return AuthResponse.builder()
-                        .success(false)
-                        .message("Registration failed: " + error)
-                        .build();
-            }
-
-            // 4️⃣ Get Keycloak user ID
-            tempKeycloakUserId = response.getLocation()
-                    .getPath()
-                    .substring(response.getLocation().getPath().lastIndexOf("/") + 1);
-            response.close();
-
-            log.info("✅ Keycloak user created in {}ms", System.currentTimeMillis() - startTime);
-
-            // 5️⃣ Determine role
-            final String role = determineRole(request.getRole());
-
-            // 6️⃣ Save to DB
-            User user = User.builder()
-                    .keycloakId(tempKeycloakUserId)
-                    .username(request.getUsername())
-                    .password(passwordEncoder.encode("KEYCLOAK_MANAGED"))
-                    .email(request.getEmail())
-                    .firstName(request.getFirstName())
-                    .lastName(request.getLastName())
-                    .role(role)
-                    .isActive(true)
-                    .build();
-
-            savedUser = userRepository.save(user);
-            log.info("✅ DB saved in {}ms", System.currentTimeMillis() - startTime);
-
-            // 7️⃣ ✅ ASSIGN ROLE (SYNC - NO BACKGROUND!)
-            try {
-                List<RoleRepresentation> existingRoles = keycloakAdmin.realm(realm)
-                        .users()
-                        .get(tempKeycloakUserId)
-                        .roles()
-                        .realmLevel()
-                        .listAll();
-
-                boolean roleAlreadyAssigned = existingRoles.stream()
-                        .anyMatch(r -> r.getName().equals(role));
-
-                if (!roleAlreadyAssigned) {
-                    RoleRepresentation roleRep = keycloakAdmin.realm(realm)
-                            .roles()
-                            .get(role)
-                            .toRepresentation();
-
-                    keycloakAdmin.realm(realm)
-                            .users()
-                            .get(tempKeycloakUserId)
-                            .roles()
-                            .realmLevel()
-                            .add(List.of(roleRep));
-
-                    log.info("✅ Role '{}' assigned", role);
-                } else {
-                    log.info("✅ Role already assigned");
-                }
-            } catch (Exception e) {
-                // Role assign failed → ROLLBACK everything
-                log.error("❌ Role assign failed: {}", e.getMessage());
-                userRepository.delete(savedUser);
-                keycloakAdmin.realm(realm).users().get(tempKeycloakUserId).remove();
-                throw new RuntimeException("Role assignment failed. Registration cancelled.");
-            }
-
-            // 8️⃣ ✅ SEND VERIFY EMAIL (SYNC - NO BACKGROUND!)
-            // try {
-            //     keycloakAdmin.realm(realm)
-            //             .users()
-            //             .get(tempKeycloakUserId)
-            //             .sendVerifyEmail();
-            //     log.info("✅ Verification email sent");
-            // } catch (Exception e) {
-            //     // Email send failed → ROLLBACK everything
-            //     log.error("❌ Email send failed: {}", e.getMessage());
-            //     userRepository.delete(savedUser);
-            //     keycloakAdmin.realm(realm).users().get(tempKeycloakUserId).remove();
-            //     throw new RuntimeException("Verification email failed. Registration cancelled.");
-            // }
-
-            // 9️⃣ Kafka event (non-critical - can fail without rollback)
-            // try {
-            //     kafkaTemplate.send("user-events", new UserRegisteredEvent(
-            //             savedUser.getId(),
-            //             savedUser.getEmail(),
-            //             savedUser.getUsername(),
-            //             savedUser.getFirstName(),
-            //             savedUser.getLastName(),
-            //             LocalDateTime.now()
-            //     ));
-            //     log.info("✅ Kafka event sent");
-            // } catch (Exception ex) {
-            //     log.error("⚠️ Kafka failed (non-critical): {}", ex.getMessage());
-            // }
-
-            log.info("🎉 Register SUCCESS in {}ms for: {}", 
-                    System.currentTimeMillis() - startTime, request.getEmail());
-
-            // 🔟 Return success ONLY after ALL critical steps succeed
-            return AuthResponse.builder()
-                    .success(true)
-                    .message("Registration successful! Please check your email to verify your account.")
-                    .id(savedUser.getId())
-                    .username(savedUser.getUsername())
-                    .email(savedUser.getEmail())
-                    .role(savedUser.getRole())
-                    .build();
-
-        } catch (Exception e) {
-            log.error("❌ Registration FAILED: {}", e.getMessage(), e);
-            
-            // Cleanup if Keycloak user was created but something failed
-            if (tempKeycloakUserId != null) {
-                try {
-                    keycloakAdmin.realm(realm)
-                            .users()
-                            .get(tempKeycloakUserId)
-                            .remove();
-                    log.info("✅ Keycloak user cleaned up after failure");
-                } catch (Exception cleanupError) {
-                    log.error("❌ Failed to cleanup Keycloak user: {}", cleanupError.getMessage());
-                }
-            }
-            
-            // Also delete DB user if saved (though shouldn't happen)
-            if (savedUser != null && savedUser.getId() != null) {
-                try {
-                    userRepository.delete(savedUser);
-                    log.info("✅ DB user cleaned up after failure");
-                } catch (Exception dbCleanupError) {
-                    log.error("❌ Failed to cleanup DB user: {}", dbCleanupError.getMessage());
-                }
-            }
-            
+        // 1. Check username exists
+        if (userRepository.existsByUsername(request.getUsername())) {
             return AuthResponse.builder()
                     .success(false)
-                    .message("Registration failed: " + e.getMessage())
+                    .message("Username already exists")
                     .build();
         }
-    }
 
-    private String determineRole(String requestedRole) {
-        if (requestedRole == null || requestedRole.isBlank()) return "USER";
-        String role = requestedRole.toUpperCase();
-        return (role.equals("ADMIN") || role.equals("USER")) ? role : "USER";
+        // 2. Check email exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return AuthResponse.builder()
+                    .success(false)
+                    .message("Email already exists")
+                    .build();
+        }
+
+        // 3. Determine role
+        String role = determineRole(request.getRole());
+
+        // 4. Save user to DB with BCrypt password
+        User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.getEmail())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .role(role)
+                .isActive(true)
+                .build();
+
+        User savedUser = userRepository.save(user);
+        log.info("User saved to DB: {}", savedUser.getEmail());
+
+        // 5. Generate JWT token
+        CustomUserDetails userDetails = new CustomUserDetails(savedUser);
+        String token = jwtService.generateToken(userDetails);
+        String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+        log.info("Registration successful for: {}", savedUser.getEmail());
+
+        return AuthResponse.builder()
+                .success(true)
+                .message("Registration successful!")
+                .token(token)
+                .refreshToken(refreshToken)
+                .id(savedUser.getId())
+                .username(savedUser.getUsername())
+                .email(savedUser.getEmail())
+                .role(savedUser.getRole())
+                .build();
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
+        log.info("Login attempt for username: {}", request.getUsername());
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
+        } catch (BadCredentialsException e) {
+            log.warn("Invalid credentials for: {}", request.getUsername());
+            return AuthResponse.builder()
+                    .success(false)
+                    .message("Invalid username or password")
+                    .build();
+        }
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String token = jwtService.generateToken(userDetails);
+        String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+        log.info("Login successful for: {}", user.getEmail());
+
         return AuthResponse.builder()
-                .success(false)
-                .message("Login handled by Keycloak")
+                .success(true)
+                .message("Login successful")
+                .token(token)
+                .refreshToken(refreshToken)
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole())
                 .build();
     }
 
     @Override
     public AuthResponse refreshToken(String refreshToken) {
-        return AuthResponse.builder()
-                .success(false)
-                .message("Token refresh handled by Keycloak")
-                .build();
+        try {
+            if (!jwtService.isTokenValid(refreshToken)) {
+                return AuthResponse.builder()
+                        .success(false)
+                        .message("Invalid or expired refresh token")
+                        .build();
+            }
+
+            String username = jwtService.extractUsername(refreshToken);
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            CustomUserDetails userDetails = new CustomUserDetails(user);
+            String newToken = jwtService.generateToken(userDetails);
+            String newRefreshToken = jwtService.generateRefreshToken(userDetails);
+
+            return AuthResponse.builder()
+                    .success(true)
+                    .message("Token refreshed")
+                    .token(newToken)
+                    .refreshToken(newRefreshToken)
+                    .build();
+        } catch (Exception e) {
+            return AuthResponse.builder()
+                    .success(false)
+                    .message("Token refresh failed: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    @Override
+    public boolean validateToken(String token) {
+        return jwtService.isTokenValid(token);
     }
 
     @Override
@@ -260,14 +166,16 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse logout() {
+        // JWT is stateless - client just deletes the token
         return AuthResponse.builder()
                 .success(true)
-                .message("Logout handled by Keycloak")
+                .message("Logged out successfully")
                 .build();
     }
 
-    @Override
-    public boolean validateToken(String token) {
-        return false;
+    private String determineRole(String requestedRole) {
+        if (requestedRole == null || requestedRole.isBlank()) return "USER";
+        String role = requestedRole.toUpperCase();
+        return (role.equals("ADMIN") || role.equals("USER")) ? role : "USER";
     }
 }

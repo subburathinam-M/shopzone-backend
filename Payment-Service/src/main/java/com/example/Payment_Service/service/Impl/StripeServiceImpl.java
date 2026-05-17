@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.context.annotation.Primary;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +33,6 @@ import java.util.Map;
 public class StripeServiceImpl implements StripeService {
 
     private final PaymentRepository paymentRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;  // 👈 ADD
 
     @Transactional
     @Override
@@ -100,7 +98,7 @@ public class StripeServiceImpl implements StripeService {
         //         LocalDateTime.now()
         //     );
             
-        //     kafkaTemplate.send("payment-events", event);
+        //        //      kafkaTemplate.send("payment-events", event);
         //     log.info(   "📤 Published PaymentEvent (PENDING) for online order: {}", request.getOrderId());
         // } catch (Exception e) {
         //     log.error("❌ Kafka error but continuing: {}", e.getMessage());
@@ -173,7 +171,7 @@ public void handlePaymentSuccess(String paymentIntentId) {
     //     LocalDateTime.now()
     // );
     
-    // kafkaTemplate.send("payment-events", event);
+    //        //  kafkaTemplate.send("payment-events", event);
     // log.info("📤 Published PaymentEvent (SUCCESS) for order: {}", payment.getOrderId());
 }
 
@@ -204,7 +202,7 @@ public void handlePaymentSuccess(String paymentIntentId) {
         //     LocalDateTime.now()
         // );
         
-        // kafkaTemplate.send("payment-events", event);
+        //        //  kafkaTemplate.send("payment-events", event);
         // log.info("📤 Published PaymentEvent (FAILED) for order: {}", payment.getOrderId());
     }
 }

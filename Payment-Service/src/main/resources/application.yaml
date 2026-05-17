@@ -20,38 +20,6 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/shopzone-realm}
-          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8090/realms/shopzone-realm/protocol/openid-connect/certs}
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
-
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-
-      properties:
-        spring.json.add.type.headers: true
-
-    consumer:
-      group-id: payment-service
-
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-
-      properties:
-        spring.json.trusted.packages: "*"
-
-        spring.json.use.type.headers: false
-
-        spring.json.type.mapping:
-          orderPlacedEvent: com.example.Payment_Service.event.OrderPlacedEvent
-
 eureka:
   instance:
     prefer-ip-address: true
@@ -72,3 +40,5 @@ stripe:
 logging:
   level:
     com.example.payment: ${LOG_LEVEL:INFO}
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-key-must-be-at-least-32-chars-long}
